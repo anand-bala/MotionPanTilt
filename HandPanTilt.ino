@@ -63,6 +63,13 @@ Servo pan, tilt;
 #define PAN_PIN   9
 #define TILT_PIN  6
 
+#define MAX_PAN   180
+#define MIN_PAN   0
+#define MAX_TILT  180
+#define MIN_TILT  30
+
+#define CONSTRAIN(val, minLim, maxLim)  ((val <= maxLim) ? ( (val >= minLim) ? val : minLim)  : maxLim)
+
 int init_position = 90;
 int pos = 90;
 
@@ -94,12 +101,13 @@ void setup() {
   Serial.println(usage);
   while (Serial.available() && Serial.read());  // Empty Buffer
   while (!Serial.available());
-  while (Serial.available()) {
-    byte d = Serial.read();
-    if(d - '1' == 0) break;
-  }
+//  while (Serial.available()) {
+//    byte d = Serial.read();
+//    if(d - '1' == 0) break;
+//  }
   
   initServos();
+  deinitServos();
   
   pinMode(LED_PIN, OUTPUT);
 }
@@ -166,6 +174,7 @@ void deinitServos() {
   if (!init_p) return;
   init_p = false;
   pan.write(90); tilt.write(90);
+  delay(15);
   pan.detach();
   tilt.detach();
 }
@@ -235,10 +244,19 @@ void loop() {
 
     mpu.dmpGetGravity     (&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+    float y = ((ypr[0]* 180/M_PI)/2) + 90;
+    float p = (ypr[1]* 180/M_PI) + 90;
+    float r = (ypr[2]* 180/M_PI) + 90;
+    angles[0] = CONSTRAIN(y, MIN_PAN, MAX_PAN);
+    angles[1] = CONSTRAIN(p, MIN_TILT, MAX_TILT);
+    angles[2] = CONSTRAIN(r, MIN_PAN, MAX_TILT);
 
-    angles[0] = ypr[0]* 180/M_PI;
-    angles[1] = ypr[1]* 180/M_PI;
-    angles[2] = ypr[2]* 180/M_PI;
+//    Serial.print("ypr\t");
+//            Serial.print(ypr[0] * 180/M_PI);
+//            Serial.print("\t");
+//            Serial.print(ypr[1] * 180/M_PI);
+//            Serial.print("\t");
+//            Serial.println(ypr[2] * 180/M_PI);
     
     #endif
 
@@ -260,7 +278,7 @@ void loop() {
     #endif
 
     pan.write(angles[0]);
-//    tilt.write(angles[1]);
+    tilt.write(angles[1]);
 //    delay(15);
 
     blinkState = !blinkState;
